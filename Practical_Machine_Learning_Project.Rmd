@@ -5,6 +5,10 @@ date: "May 20, 2016"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 # Overview
 
 This report outlines and presents the analysis and results of the final project for the Coursera Practical Machine Learning course that is part of the Johns Hopkins University Data Science Specialization. The objective of the project is to analyse data concerned with the broad area of human activity recognition where, in this case, those activities relate to prperly and improperly lifting weights during exersize. The data incorporates six healthy young subjects performing dumbell curls in five different motions termed Class A through Class E. Class A represents the proper technique while the other classes represent various common mistakes and errors in the lifting technique. This project demonstrates the ability to predict the class of error (i.e. Class B through Class E) based on supplied training and testing data sets. The classes are defined as:
@@ -122,13 +126,13 @@ pred
 ```
 With the result:
 
-Test:   | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10
-------- | - | - | - | - | - | - | - | - | - | -
-Answer: | B | A | B | A | A | E | D | B | A | A
+Test   |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10
+------ | -- | -- | -- | -- | -- | -- | -- | -- | -- | --
+Answer | B  | A  | B  | A  | A  | E  | D  | B  | A  | A
 
-Test:   |11 |12 |13 |14 |15 |16 |17 |18 |19 |20
-------- | - | - | - | - | - | - | - | - | - | -
-Answer: | B | C | B | A | E | E | A | B | B | B
+Test   | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20
+------ | -- | -- | -- | -- | -- | -- | -- | -- | -- | --
+Answer | B  | C  | B  | A  | E  | E  | A  | B  | B  | B
 
 
 
