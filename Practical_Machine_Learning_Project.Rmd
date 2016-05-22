@@ -1,0 +1,138 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Jack Riddle"
+date: "May 20, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This report outlines and presents the analysis and results of the final project for the Coursera Practical Machine Learning course that is part of the Johns Hopkins University Data Science Specialization. The objective of the project is to analyse data concerned with the broad area of human activity recognition where, in this case, those activities relate to prperly and improperly lifting weights during exersize. The data incorporates six healthy young subjects performing dumbell curls in five different motions termed Class A through Class E. Class A represents the proper technique while the other classes represent various common mistakes and errors in the lifting technique. This project demonstrates the ability to predict the class of error (i.e. Class B through Class E) based on supplied training and testing data sets. The classes are defined as:
+
+* A: Correct unilateral dumbell curve
+* B: Throwing elbows forward
+* C: Lifting dumbell half distance
+* D: Lowering dumbell half distance
+* E: Throwing hips forward
+
+
+More information on the data and the collection may be found by visiting the website http://groupware.les.inf.puc-rio.br/har. The training and test data used in the analysis may be obtained from https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv and https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv, respectively.    
+
+
+
+# Detailed Description of Analysis
+
+### Exploratory Data Analysis
+
+The first step in the process is to load and inspect the data sets:
+```{r load, echo=TRUE, warning=FALSE, eval=FALSE}
+# Load necessary Libraries
+library(caret)
+library(randomForest)
+library(e1071)
+
+# --- Create data frames containing the training and testing data. 
+#  Note: these instructions require the data be in the same directory this file
+base_train <- read.csv(file = "pml-training.csv", na.string = c("NA", ""))
+base_test <- read.csv(file = "pml-testing.csv", na.string = c("NA", ""))
+
+# --- Inspect the data set
+str(base_trn)
+str(tst)
+```
+
+The training data set consists of 19622 observations of 160 features and the testing set consists of 20 observations of 160 features. After a detailed inspection it was discovered that a significant number of the features primarily consisted of missing values or were features not appriate to the analysis and the decision was made to exclude those features:
+```{r pp, echo=TRUE, warning=FALSE, eval=FALSE}
+# Separate "bad" features from pertinate ones 
+ncnt <- apply(base_train, 2, function(var) sum(is.na(var)))
+features_bad <- names(ncnt)[ncnt > 0]
+features_good <- names(ncnt)[ncnt == 0]
+base_train_tmp <- base_train[, features_good]
+base_train_red <- base_train_tmp[, -c(1 : 7)]
+```
+
+After this preprocessing step the base training data for this problem now consists of 19622 observations of 53 relevant features. All of the relevant features are either numerical or integer except for "classe" which is the prediction variable. It is a factor variable with 5 levels (A through E).
+
+### Training Process
+
+Since there is a very large number of training samples to work with it was possible and advisable to perform a cross validation step. Originally a k-fold cross validation (using the cv.folds option) was employed, however, it was discovered that this resulted in prohibitively large training times. With this in mind it was decided a simpler cross validation step where 10% of the training data was reserved to compute out-of-sample accuracy and the other 90% was used for training purposes could be employed without detrimentally affecting the results. 
+
+This code represents that step:
+```{r val, echo=TRUE, warning=FALSE, eval=FALSE}
+# --- Create new training and validation sets
+# Set random seed
+set.seed(29544)
+
+# Divide training set into new training (90%) and validation (10%) sets 
+inTrain <- createDataPartition(y = base_train_red$classe, p = .90, list = FALSE)
+training <- base_train_red[ inTrain, ]
+validation  <- base_train_red[-inTrain, ]
+```
+
+### Testing Process and Results
+
+At this stage it was decided to evaluate three different classification techniques. The three selected were the random forest classifier, the stochastic gradient boosting classifer and the support vector machine classifer. The reason for choosing these three was based on their popularity in the modern literature. It should be noted that in all three cases, when fitting models, default parameters were employed. So the following analysis related to the "best" classifer could potentially have different results with more targeted parameter selection during the training processes following a much more detailed analysis of the training data.  
+
+```{r cls, echo=TRUE, warning=FALSE, eval=FALSE}
+# --- Choose classifier based on accuracy agains cross validation set
+# Candidates: random forest, stochastic gradient boosting and support vector machine
+cf <- vector("numeric", length = 3)
+
+# random forest result using validation set
+modFit_rf <- randomForest(classe ~ ., data = training)
+pred_rf <- predict(modFit_rf, validation)
+cf_rf <- confusionMatrix(validation$classe, pred_rf)
+cf[1] <- cf_rf$overall[[1]]
+
+# stochastic gradient boosting result using validation set
+modFit_gbm <- train(classe ~ ., method = "gbm", data = training, verbose = FALSE)
+pred_gbm <- predict(modFit_gbm, validation)
+cf_gbm <- confusionMatrix(validation$classe, pred_gbm)
+cf[2] <- cf_gbm$overall[[1]]
+
+# SVM result using validation set
+modFit_svm <- svm(classe ~ ., data = training)
+pred_svm <- predict(modFit_svm, validation)
+cf_svm <- confusionMatrix(validation$classe, pred_svm)
+cf[3] <- cf_svm$overall[[1]]
+cf
+
+# Out-of-sample error
+err <- 1.0 - cf  
+err
+```
+
+Inspecting the results vector, cf, the accuracies and out-of-sample-errors for the random forest, gbm and SVM were:
+
+Classifier | Accuracy (%) | Out-of-sample Error (%) 
+---------- | ------------ | ----------------------- 
+rf         | 99.745       | 0.255
+---------- | ------------ | -----------------------
+gbm        | 96.327       | 3.673 
+---------- | ------------ | ----------------------- 
+SVM        | 95.561       | 4.439 
+
+So from this result the random forest was chosen as the classifier to implement in the final design.
+
+Finally, the random forest-based design was utilized to evaluate the original test data set:
+```{r fin, echo=TRUE, warning=FALSE, eval=FALSE}
+# --- Verify result against test set
+pred <- predict(modFit_rf, base_test)
+pred
+```
+With the result:
+
+Test:   | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10 |11 |12 |13 |14 |15 |16 |17 |18 |19 |20
+------- | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | -
+Answer: | B | A | B | A | A | E | D | B | A | A | B | C | B | A | E | E | A | B | B | B
+
+
+
+# Summary
+
+An analysis was performed on a set of human activity recognition concerned with the ability to predict, from sensor data, whether ot not a subject was performing an exersize correctly or incorrectly. The provided training data was suffucient in size to enable the creation of a cross validation set which, in turn, enabled several classification techniques to be investigated. The best technique in terms of out-of-sample error on the cross validation data was chosen as the design. Once that selection was made, the provided test data was processed with 100% correct classification on all twenty tests verifying a correct design.        
+
